@@ -1,0 +1,5 @@
+### Go Project template
+*.iml
+.idea
+bin/
+log/
