@@ -1,0 +1,11 @@
+app:
+  mode: dev # dev, release
+
+log:
+  level: "debug" # error,warning,info,debug
+  filepath: "log/app.log"
+  format: "2006-01-02-15-04-05.000"
+  max-backups: 10
+  max-reserved-days: 30 # day
+  max-reserved-mb: 10 # MB
+  compress: false
