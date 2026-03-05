@@ -1,6 +1,8 @@
 package logger
 
-import "io"
+import (
+	"io"
+)
 
 type Logger interface {
 	Debugf(format string, args ...interface{})
@@ -19,4 +21,19 @@ type Logger interface {
 	InfoWriter() io.Writer
 	WarnWriter() io.Writer
 	ErrorWriter() io.Writer
+
+	Close() error
+}
+
+var logger Logger = NewStandardLogger(DefaultConfig, 2)
+
+func Override(l Logger) {
+	if logger != nil {
+		logger.Close()
+	}
+	logger = l
+}
+
+func Close() error {
+	return logger.Close()
 }

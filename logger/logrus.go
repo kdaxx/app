@@ -2,8 +2,8 @@ package logger
 
 import (
 	"fmt"
-	"github.com/fahedouch/go-logrotate"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"log"
 	"os"
@@ -11,19 +11,12 @@ import (
 	"strings"
 )
 
-var logger Logger = NewStandardLogger(DefaultConfig, 2)
-
-func Override(l Logger) {
-	logger = l
-}
-
 var DefaultConfig = &Config{
-	Level:      logrus.InfoLevel.String(),
-	Format:     "2006-01-02-15-04-05.000",
-	Filepath:   "log/app.log",
+	LogLevel:   logrus.InfoLevel.String(),
+	Filename:   "log/app.log",
 	MaxBackups: 10,
 	MaxAge:     15,
-	MaxBytes:   1024 * 1024 * 10,
+	MaxSize:    10,
 	Compress:   false,
 }
 
@@ -44,19 +37,19 @@ func (f *Formatter) Format(entry *logrus.Entry) ([]byte, error) {
 }
 
 type Config struct {
-	Filepath   string
-	Level      string
-	Format     string
-	MaxBackups int
-	MaxAge     int
-	MaxBytes   int64
-	Compress   bool
+	Filename    string
+	MaxSize     int
+	MaxBackups  int
+	MaxAge      int
+	Compress    bool
+	LogLevel    string
+	ProductMode bool
 }
 
 func NewStandardLogger(config *Config, callerSkip int) Logger {
 	l := logrus.New()
 	l.SetFormatter(&Formatter{})
-	level, err := logrus.ParseLevel(config.Level)
+	level, err := logrus.ParseLevel(config.LogLevel)
 	if err != nil {
 		level = logrus.InfoLevel
 	}
@@ -64,25 +57,38 @@ func NewStandardLogger(config *Config, callerSkip int) Logger {
 
 	// compatible system log with debug level
 	log.SetOutput(l.WriterLevel(logrus.DebugLevel))
-
-	output := io.MultiWriter(os.Stdout, &logrotate.Logger{
-		Filename:           config.Filepath,
-		FilenameTimeFormat: config.Format,
-		MaxBytes:           config.MaxBytes,
-		MaxBackups:         config.MaxBackups,
-		MaxAge:             config.MaxAge, //days
-		Compress:           config.Compress,
-	})
-	l.SetOutput(output)
-	return &StandardLogger{
+	s := &StandardLogger{
 		logger:     l,
 		callerSkip: callerSkip,
 	}
+	if config.ProductMode {
+		rotate := &lumberjack.Logger{
+			Filename:   config.Filename,
+			MaxSize:    config.MaxSize,
+			MaxBackups: config.MaxBackups,
+			MaxAge:     config.MaxAge,
+			Compress:   config.Compress,
+		}
+		l.SetOutput(rotate)
+		s.rotate = rotate
+	} else {
+		l.SetOutput(os.Stdout)
+	}
+
+	return s
 }
 
 type StandardLogger struct {
 	logger     *logrus.Logger
 	callerSkip int
+	rotate     *lumberjack.Logger
+}
+
+func (s *StandardLogger) Close() error {
+	if s.rotate != nil {
+		return s.rotate.Close()
+	}
+	return nil
 }
 
 func (s *StandardLogger) DebugWriter() io.Writer {

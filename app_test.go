@@ -3,8 +3,8 @@ package app
 import (
 	"context"
 	"errors"
-	"github.com/kdaxx/app/logger"
 	"github.com/kdaxx/common/task"
+	"log"
 	"testing"
 )
 
@@ -28,7 +28,13 @@ func TestApp(t *testing.T) {
 
 	cancelFunc()
 	<-latch.Wait()
-	logger.Debug("done")
-	logger.Info("done")
-	logger.Warn("done")
+	log.Println("done")
+}
+
+func TestAppLog(t *testing.T) {
+
+}
+
+func TestAppLogrotate(t *testing.T) {
+
 }

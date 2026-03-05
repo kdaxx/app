@@ -19,10 +19,8 @@ func (c *Core) ApplyRegistry(register container.BeanRegistry) {
 	register.RegisterBean(
 		// Injector enables the app to have automatic configuration injection.
 		config.NewInjector(),
-
-		// Logger enables app to record, rotate logs.
-		NewFileConfig(),
 		logger.NewFileConfig(),
-		logger.NewAppLogger(),
+		NewFileConfig(),
+		NewAppLogger(),
 	)
 }
