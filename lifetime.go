@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"reflect"
+
 	"github.com/kdaxx/container/v3"
 )
 
@@ -24,6 +26,20 @@ type Preparer interface {
 // but this does not mean that the bean has started working.
 type Initializer interface {
 	Initialize() error
+}
+
+// PreInitializer : PreInitializer's Initializer must execute
+// before all instances of the type returned by `InitializeBefore`.
+type PreInitializer interface {
+	Initializer
+	InitializeBefore() []reflect.Type
+}
+
+// PostInitializer : PostInitializer's Initializer must execute
+// after all instances of the type returned by `InitializeAfter`.
+type PostInitializer interface {
+	Initializer
+	InitializeAfter() []reflect.Type
 }
 
 // Runnable means that the bean can execute a task,

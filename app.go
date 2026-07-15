@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+
 	"github.com/kdaxx/app/logger"
 )
 
@@ -11,6 +12,7 @@ const (
 
 const (
 	Release string = "release"
+	Test    string = "test"
 	Dev     string = "dev"
 )
 

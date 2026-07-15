@@ -2,13 +2,14 @@ package logger
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"io"
 	"log"
 	"os"
 	"runtime"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 var DefaultConfig = &Config{

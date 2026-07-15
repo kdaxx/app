@@ -2,10 +2,11 @@ package config
 
 import (
 	"errors"
+	"reflect"
+
 	"github.com/kdaxx/common/errs"
 	"github.com/kdaxx/container/v3"
 	"github.com/spf13/viper"
-	"reflect"
 )
 
 func NewInjector() *Injector {
@@ -31,10 +32,10 @@ func (i *Injector) Prepare() error {
 		if errors.As(err, &viper.ConfigFileNotFoundError{}) {
 			// Config file not found; ignore error if desired
 			return errs.Newf("config file [%s] not found: %v\n", AppConfigFileName, err)
-		} else {
-			// Config file was found but another error was produced
-			return errs.Newf("read config file [%s] failed: %v\n", AppConfigFileName, err)
 		}
+
+		// Config file was found but another error was produced
+		return errs.Newf("read config file [%s] failed: %v\n", AppConfigFileName, err)
 	}
 	configs, ok := i.container.GetBeanByType(reflect.TypeFor[Configuration]())
 	if !ok {
