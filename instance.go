@@ -2,15 +2,17 @@ package app
 
 import (
 	"context"
-	"github.com/kdaxx/app/logger"
-	"github.com/kdaxx/common/task"
-	"github.com/kdaxx/container/v3"
-	"github.com/kdaxx/container/v3/inject"
+	"fmt"
 	"os"
 	"os/signal"
 	"reflect"
 	"syscall"
 	"time"
+
+	"github.com/kdaxx/app/logger"
+	"github.com/kdaxx/common/task"
+	"github.com/kdaxx/container/v3"
+	"github.com/kdaxx/container/v3/inject"
 )
 
 func NewApp() *App {
@@ -34,6 +36,7 @@ func (app *App) RunApplication(ctx context.Context) error {
 	if err := app.applyPreparers(); err != nil {
 		return err
 	}
+	// inject dependencies
 	if err := app.container.Process(); err != nil {
 		return err
 	}
@@ -57,15 +60,66 @@ func (app *App) RunApplication(ctx context.Context) error {
 }
 
 func (app *App) applyInitializers() error {
-	beanDefinitions, ok := app.container.GetBeanByType(reflect.TypeFor[Initializer]())
+
+	// find all Initializer
+	beanDefinitions, ok := app.container.GetBeanByType(
+		reflect.TypeFor[Initializer](),
+	)
+
 	if !ok {
 		return nil
 	}
+
+	// =========================
+	// 1. create init nodes
+	// =========================
+
+	nodes := make([]*initNode, 0, len(beanDefinitions))
+
 	for _, beanDefinition := range beanDefinitions {
-		initializer := beanDefinition.Bean().(Initializer)
-		err := initializer.Initialize()
-		if err != nil {
-			return err
+
+		bean := beanDefinition.Bean()
+
+		initializer, ok := bean.(Initializer)
+		if !ok {
+			continue
+		}
+
+		nodes = append(nodes, &initNode{
+			bean: beanDefinition,
+			init: initializer,
+			name: reflect.TypeOf(bean).String(),
+		})
+	}
+
+	// =========================
+	// 2. establish dependencies
+	// =========================
+
+	if err := buildInitializerGraph(nodes); err != nil {
+		return err
+	}
+
+	// =========================
+	// 3. DFS ordering
+	// =========================
+
+	order, err := topoSort(nodes)
+
+	if err != nil {
+		return err
+	}
+
+	// =========================
+	// 4. initialize in order
+	// =========================
+	for _, node := range order {
+		if err := node.init.Initialize(); err != nil {
+			return fmt.Errorf(
+				"initialize %s failed: %w",
+				node.name,
+				err,
+			)
 		}
 	}
 	return nil
