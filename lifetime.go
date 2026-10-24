@@ -23,7 +23,7 @@ type Preparer interface {
 // Initializer is application-level initialization hook, where dependency injection is performed.
 // adding or removing container beans no longer affects beans that have already undergone dependency injection.
 // some initialization tasks that requires dependencies can be run at this stage,
-// but this does not mean that the bean has started working.
+// but this does not mean that the Bean has started working.
 type Initializer interface {
 	Initialize() error
 }
@@ -42,8 +42,8 @@ type PostInitializer interface {
 	InitializeAfter() []reflect.Type
 }
 
-// Runnable means that the bean can execute a task,
-// and all initialization operations have been completed at this point, meaning the bean can begin executing the task.
+// Runnable means that the Bean can execute a task,
+// and all initialization operations have been completed at this point, meaning the Bean can begin executing the task.
 type Runnable interface {
 	Run() error
 }
