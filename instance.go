@@ -58,6 +58,28 @@ func (app *App) RunApplication(ctx context.Context) error {
 	app.stopApplications()
 	return appContext.Err()
 }
+func newSeqAdapter() *seqAdapter {
+	return &seqAdapter{}
+}
+
+type seqAdapter struct {
+	preInitializer  PreInitializer
+	postInitializer PostInitializer
+}
+
+func (s *seqAdapter) Before() []reflect.Type {
+	if s.preInitializer != nil {
+		return s.preInitializer.InitializeBefore()
+	}
+	return []reflect.Type{}
+}
+
+func (s *seqAdapter) After() []reflect.Type {
+	if s.postInitializer != nil {
+		return s.postInitializer.InitializeAfter()
+	}
+	return nil
+}
 
 func (app *App) applyInitializers() error {
 
@@ -71,24 +93,36 @@ func (app *App) applyInitializers() error {
 	}
 
 	// =========================
-	// 1. create init nodes
+	// 1. create Init nodes
 	// =========================
 
-	nodes := make([]*initNode, 0, len(beanDefinitions))
+	nodes := make([]*InitNode, 0, len(beanDefinitions))
 
 	for _, beanDefinition := range beanDefinitions {
 
 		bean := beanDefinition.Bean()
 
-		initializer, ok := bean.(Initializer)
+		_, ok := bean.(Initializer)
 		if !ok {
 			continue
 		}
 
-		nodes = append(nodes, &initNode{
-			bean: beanDefinition,
-			init: initializer,
-			name: reflect.TypeOf(bean).String(),
+		initAdapter := newSeqAdapter()
+
+		pre, ok := bean.(PreInitializer)
+		if ok {
+			initAdapter.preInitializer = pre
+		}
+
+		post, ok := bean.(PostInitializer)
+		if ok {
+			initAdapter.postInitializer = post
+		}
+
+		nodes = append(nodes, &InitNode{
+			Bean: beanDefinition,
+			Init: initAdapter,
+			Name: beanDefinition.Type().String(),
 		})
 	}
 
@@ -114,10 +148,11 @@ func (app *App) applyInitializers() error {
 	// 4. initialize in order
 	// =========================
 	for _, node := range order {
-		if err := node.init.Initialize(); err != nil {
+		initializer := node.Bean.Bean().(Initializer)
+		if err := initializer.Initialize(); err != nil {
 			return fmt.Errorf(
 				"initialize %s failed: %w",
-				node.name,
+				node.Name,
 				err,
 			)
 		}

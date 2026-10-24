@@ -1,4 +1,4 @@
-package test
+package app
 
 import (
 	"context"
@@ -8,14 +8,13 @@ import (
 	"reflect"
 	"testing"
 
-	APP "github.com/kdaxx/app"
 	"github.com/kdaxx/common/task"
 	"github.com/kdaxx/container/v3"
 )
 
 func TestApp(t *testing.T) {
-	app := APP.NewApp()
-	app.Enable(APP.NewCore())
+	app := NewApp()
+	app.Enable(NewCore())
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -63,10 +62,10 @@ func (a *InitA) InitializeAfter() []reflect.Type {
 }
 
 func (a *InitA) Initialize() error {
-	fmt.Println("A init")
+	fmt.Println("A Init")
 	a.Init = true
 	if !(a.c.Init && a.b.Init) {
-		return errors.New("b & c init before a")
+		return errors.New("b & c Init before a")
 	}
 	return nil
 }
@@ -83,10 +82,10 @@ func (b *InitB) Inject() any {
 }
 
 func (b *InitB) Initialize() error {
-	fmt.Println("B init")
+	fmt.Println("B Init")
 	b.Init = true
 	if !b.d.Init {
-		return errors.New("d init before b")
+		return errors.New("d Init before b")
 	}
 	return nil
 }
@@ -109,10 +108,10 @@ func (c *InitC) Inject() any {
 }
 
 func (c *InitC) Initialize() error {
-	fmt.Println("C init")
+	fmt.Println("C Init")
 	c.Init = true
 	if !c.b.Init {
-		return errors.New("b init before c")
+		return errors.New("b Init before c")
 	}
 	return nil
 }
@@ -127,7 +126,7 @@ type InitD struct {
 }
 
 func (d *InitD) Initialize() error {
-	fmt.Println("D init")
+	fmt.Println("D Init")
 	d.Init = true
 	return nil
 }
@@ -140,7 +139,7 @@ func (i *InitRegistrar) ApplyRegistry(registry container.BeanRegistry) {
 }
 
 func TestInitializer(t *testing.T) {
-	app := APP.NewApp()
+	app := NewApp()
 	app.Enable(&InitRegistrar{})
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
@@ -166,7 +165,7 @@ type LoopA struct {
 }
 
 func (l *LoopA) Initialize() error {
-	fmt.Println("loopA init")
+	fmt.Println("loopA Init")
 	return nil
 }
 
@@ -186,7 +185,7 @@ func (l *LoopB) InitializeBefore() []reflect.Type {
 }
 
 func (l *LoopB) Initialize() error {
-	fmt.Println("loopB init")
+	fmt.Println("loopB Init")
 	return nil
 }
 
@@ -194,7 +193,7 @@ type LoopC struct {
 }
 
 func (l *LoopC) Initialize() error {
-	fmt.Println("loopC init")
+	fmt.Println("loopC Init")
 	return nil
 }
 
@@ -212,7 +211,7 @@ func (i *InitLoopRegistrar) ApplyRegistry(registry container.BeanRegistry) {
 }
 
 func TestInitializerLoop(t *testing.T) {
-	app := APP.NewApp()
+	app := NewApp()
 	app.Enable(&InitLoopRegistrar{})
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
