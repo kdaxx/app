@@ -1,7 +1,6 @@
 package app
 
 import (
-	"github.com/kdaxx/app/config"
 	"github.com/kdaxx/app/logger"
 	"github.com/kdaxx/container/v3"
 )
@@ -18,7 +17,6 @@ type Core struct {
 func (c *Core) ApplyRegistry(register container.BeanRegistry) {
 	register.RegisterBean(
 		// Injector enables the app to have automatic configuration injection.
-		config.NewInjector(),
 		logger.NewFileConfig(),
 		NewFileConfig(),
 		NewAppLogger(),

@@ -1,5 +1,7 @@
 app:
-  mode: dev # dev, release
+  mode: dev # dev, test, release
+  # reading application-{app.profile}.yaml
+  profile: dev
 
 log:
   level: "debug" # error,warning,info,debug

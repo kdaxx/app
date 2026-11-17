@@ -16,35 +16,48 @@ import (
 )
 
 func NewApp() *App {
-	return &App{
+	a := &App{
 		container: inject.NewInjectContainer(),
 	}
+	a.injector = NewInjector(a.container)
+	return a
 }
 
 type App struct {
 	container container.ProcessableContainer
+	injector  *Injector
 }
 
-func (app *App) RunApplication(ctx context.Context) error {
+// AddConfigPath add the directory path containing the configuration file (ConfigFileName).
+func (a *App) AddConfigPath(path string) {
+	a.injector.AddConfigPath(path)
+}
+
+func (a *App) RunApplication(ctx context.Context) error {
 	logger.Info("application start")
 
 	appContext, cancel := context.WithCancel(ctx)
 	defer cancel()
-	// apply ContainerAware
-	app.injectContainer()
 
-	if err := app.applyPreparers(); err != nil {
+	if err := a.injectConfig(); err != nil {
+		return err
+	}
+
+	// apply ContainerAware
+	a.injectContainer()
+
+	if err := a.applyPreparers(); err != nil {
 		return err
 	}
 	// inject dependencies
-	if err := app.container.Process(); err != nil {
+	if err := a.container.Process(); err != nil {
 		return err
 	}
 
-	if err := app.applyInitializers(); err != nil {
+	if err := a.applyInitializers(); err != nil {
 		return err
 	}
-	if err := app.runApplications(); err != nil {
+	if err := a.runApplications(); err != nil {
 		return err
 	}
 
@@ -55,36 +68,18 @@ func (app *App) RunApplication(ctx context.Context) error {
 	case <-appContext.Done():
 	}
 
-	app.stopApplications()
+	a.stopApplications()
 	return appContext.Err()
 }
-func newSeqAdapter() *seqAdapter {
-	return &seqAdapter{}
+
+func (a *App) injectConfig() error {
+	return a.injector.InjectConfig()
 }
 
-type seqAdapter struct {
-	preInitializer  PreInitializer
-	postInitializer PostInitializer
-}
-
-func (s *seqAdapter) Before() []reflect.Type {
-	if s.preInitializer != nil {
-		return s.preInitializer.InitializeBefore()
-	}
-	return []reflect.Type{}
-}
-
-func (s *seqAdapter) After() []reflect.Type {
-	if s.postInitializer != nil {
-		return s.postInitializer.InitializeAfter()
-	}
-	return nil
-}
-
-func (app *App) applyInitializers() error {
+func (a *App) applyInitializers() error {
 
 	// find all Initializer
-	beanDefinitions, ok := app.container.GetBeanByType(
+	beanDefinitions, ok := a.container.GetBeanByType(
 		reflect.TypeFor[Initializer](),
 	)
 
@@ -160,8 +155,8 @@ func (app *App) applyInitializers() error {
 	return nil
 }
 
-func (app *App) applyPreparers() error {
-	beanDefinitions, ok := app.container.GetBeanByType(reflect.TypeFor[Preparer]())
+func (a *App) applyPreparers() error {
+	beanDefinitions, ok := a.container.GetBeanByType(reflect.TypeFor[Preparer]())
 	if !ok {
 		return nil
 	}
@@ -175,19 +170,19 @@ func (app *App) applyPreparers() error {
 	return nil
 }
 
-func (app *App) injectContainer() {
-	beanDefinitions, ok := app.container.GetBeanByType(reflect.TypeFor[ContainerAware]())
+func (a *App) injectContainer() {
+	beanDefinitions, ok := a.container.GetBeanByType(reflect.TypeFor[ContainerAware]())
 	if !ok {
 		return
 	}
 	for _, beanDefinition := range beanDefinitions {
 		initializer := beanDefinition.Bean().(ContainerAware)
-		initializer.SetContainer(app.container)
+		initializer.SetContainer(a.container)
 	}
 }
 
-func (app *App) runApplications() error {
-	beanDefinitions, ok := app.container.GetBeanByType(reflect.TypeFor[Runnable]())
+func (a *App) runApplications() error {
+	beanDefinitions, ok := a.container.GetBeanByType(reflect.TypeFor[Runnable]())
 	if !ok {
 		return nil
 	}
@@ -203,11 +198,11 @@ func (app *App) runApplications() error {
 
 // forced exit (e.g., calling Close(), or directly exiting the main goroutine) does only "stop waiting",
 // but it does not mean that all goroutines have been released or exited.
-func (app *App) stopApplications() {
+func (a *App) stopApplications() {
 	defer func() {
 		logger.Info("application stopped")
 	}()
-	beanDefinitions, ok := app.container.GetBeanByType(reflect.TypeFor[Stoppable]())
+	beanDefinitions, ok := a.container.GetBeanByType(reflect.TypeFor[Stoppable]())
 	if !ok {
 		return
 	}
@@ -216,7 +211,7 @@ func (app *App) stopApplications() {
 	latch.Add(len(beanDefinitions))
 
 	var wait = 5
-	logger.Infof("app will be stopped in %d seconds", wait)
+	logger.Infof("a will be stopped in %d seconds", wait)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(wait)*time.Second)
 	defer cancel()
@@ -239,6 +234,29 @@ func (app *App) stopApplications() {
 
 }
 
-func (app *App) Enable(registrars ...container.BeanRegistrar) {
-	app.container.ApplyRegistrar(registrars...)
+func (a *App) Enable(registrars ...container.BeanRegistrar) {
+	a.container.ApplyRegistrar(registrars...)
+}
+
+func newSeqAdapter() *seqAdapter {
+	return &seqAdapter{}
+}
+
+type seqAdapter struct {
+	preInitializer  PreInitializer
+	postInitializer PostInitializer
+}
+
+func (s *seqAdapter) Before() []reflect.Type {
+	if s.preInitializer != nil {
+		return s.preInitializer.InitializeBefore()
+	}
+	return []reflect.Type{}
+}
+
+func (s *seqAdapter) After() []reflect.Type {
+	if s.postInitializer != nil {
+		return s.postInitializer.InitializeAfter()
+	}
+	return nil
 }

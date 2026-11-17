@@ -1,0 +1,10 @@
+app:
+  mode: test  # dev, release
+
+log:
+  level: "debug" # error,warning,info,debug
+  filepath: "log/app.log"
+  max-backups: 10
+  max-reserved-days: 30 # day
+  max-reserved-mb: 10 # MB
+  compress: false
